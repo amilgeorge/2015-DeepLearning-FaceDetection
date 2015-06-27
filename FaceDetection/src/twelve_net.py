@@ -80,14 +80,14 @@ class LeNetConvPoolLayer(object):
         self.W = theano.shared(
             numpy.asarray(
                 rng.uniform(low=-W_bound, high=W_bound, size=filter_shape),
-                dtype=theano.config.floatX
+                dtype=theano.config.floatX  # @UndefinedVariable
             ),
             borrow=True
         )
 
         # the bias is a 1D tensor -- one bias per output feature map
-        b_values = numpy.zeros((filter_shape[0],), dtype=theano.config.floatX)
-        self.b = theano.shared(value=b_values, borrow=True)
+        b_values = numpy.zeros((filter_shape[0],), dtype=theano.config.floatX)  # @UndefinedVariable
+        self.b = theano.shared(value=b_values, borrow=True) 
 
         conv_layer_stride = 1;
         # convolve input feature maps with filters
@@ -171,8 +171,6 @@ def evaluate_12net(learning_rate=0.1, n_epochs=200,
     # maxpooling reduces this further to (10 - 3)/2 +1, (10 - 3)/2 +1 = (12, 12)
     # 4D output tensor is thus of shape (batch_size, nkerns[0], 12, 12)
     
-   
-    
     
     # how to set image size for differnet size images
     nkerns = 1 #Depth param
@@ -206,7 +204,7 @@ def evaluate_12net(learning_rate=0.1, n_epochs=200,
     cost = layer1.negative_log_likelihood(y)
     
         # create a list of all model parameters to be fit by gradient descent
-    params =  layer1.params + layer0.params
+    params =  layer1.params + hidden_layer.params+layer0.params
 
     # create a list of gradients for all model parameters
     grads = T.grad(cost, params)

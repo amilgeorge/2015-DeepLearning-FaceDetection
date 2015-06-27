@@ -42,7 +42,7 @@ from skimage.transform._warps import resize
 class LeNetConvPoolLayer(object):
     """Pool Layer of a convolutional network """
 
-    def __init__(self, rng, input, filter_shape, image_shape, poolsize=(2, 2)):
+    def __init__(self, rng, input, filter_shape, image_shape, poolsize=(3, 3)):
         """
         Allocate a LeNetConvPoolLayer with shared variable internal parameters.
 
@@ -89,19 +89,22 @@ class LeNetConvPoolLayer(object):
         b_values = numpy.zeros((filter_shape[0],), dtype=theano.config.floatX)
         self.b = theano.shared(value=b_values, borrow=True)
 
+        conv_layer_stride = 1;
         # convolve input feature maps with filters
         conv_out = conv.conv2d(
             input=input,
             filters=self.W,
             filter_shape=filter_shape,
-            image_shape=image_shape
+            image_shape=image_shape,
+            subsample=(conv_layer_stride,conv_layer_stride)
         )
 
         # downsample each feature map individually, using maxpooling
         pooled_out = downsample.max_pool_2d(
             input=conv_out,
             ds=poolsize,
-            ignore_border=True
+            ignore_border=True,
+            st = (2,2)
         )
 
         # add the bias term. Since the bias is a vector (1D array), we first
@@ -164,38 +167,40 @@ def evaluate_12net(learning_rate=0.1, n_epochs=200,
     layer0_input = x.reshape((batch_size, 3, 12, 12))
 
     # Construct the first convolutional pooling layer:
-    # filtering reduces the image size to (28-5+1 , 28-5+1) = (24, 24)
-    # maxpooling reduces this further to (24/2, 24/2) = (12, 12)
+    # filtering reduces the image size to (12-3 + 1 , 12-3+1) = (10, 10)
+    # maxpooling reduces this further to (10 - 3)/2 +1, (10 - 3)/2 +1 = (12, 12)
     # 4D output tensor is thus of shape (batch_size, nkerns[0], 12, 12)
+    
+   
+    
     
     # how to set image size for differnet size images
     nkerns = 1 #Depth param
     num_feature_maps_in_layer = 3 # RGB values
-    
-    
-    
     ## TODO : IS the training image shape is 12 X 12 ?? How to convolve in that case
     ## During testing it is nto necessary 
+    
+    filter_size = 3 # 
     
     layer0 = LeNetConvPoolLayer(
         rng,
         input=layer0_input,
-        image_shape=(batch_size, num_feature_maps_in_layer, 12, 12),
-        filter_shape=(nkerns, num_feature_maps_in_layer, 12, 12),
-        poolsize=(2, 2)
+        image_shape=(batch_size, num_feature_maps_in_layer, 13, 13),
+        filter_shape=(nkerns, num_feature_maps_in_layer, filter_size, filter_size),
+        poolsize=(3, 3)
     )
     
     
     hidden_layer = HiddenLayer(
         rng,
         input=layer0.output.flatten(2),
-        n_in=nkerns * 1 * 1,
-        n_out=500,
+        n_in=nkerns * 5 * 5,
+        n_out=16,
         activation=T.tanh
     )
     
-    
-    layer1 = LogisticRegression(input=hidden_layer.output, n_in=500, n_out=2)
+    ## TODO : How many neurons in t
+    layer1 = LogisticRegression(input=hidden_layer.output, n_in=16, n_out=2)
     
  
     cost = layer1.negative_log_likelihood(y)
@@ -237,10 +242,10 @@ def evaluate_12net(learning_rate=0.1, n_epochs=200,
 
 def get_test_data():
     img1 = imread('data/test/img_1.jpg')
-    testimg1 = resize(img1,(12,12)).flatten()
+    testimg1 = resize(img1,(13,13)).flatten()
     
     img2 = imread('data/test/img_47.jpg')
-    testimg2 = resize(img1,(12,12)).flatten()
+    testimg2 = resize(img1,(13,13)).flatten()
     t = testimg1[numpy.newaxis,...]
     
     list_imgs = numpy.concatenate([testimg1[numpy.newaxis,...],testimg2[numpy.newaxis,...]])

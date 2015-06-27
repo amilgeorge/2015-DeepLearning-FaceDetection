@@ -24,9 +24,17 @@ lines = file.readlines()
 n_lines = len(lines)
 i = 0
 
-mode = None
+mode = "file"
 
 while(i < n_lines):
-    
-
+    line = lines[i]
     i += 1
+    n_faces = lines[i]
+    i+=1
+    for j in xrange(int(n_faces)):
+        params =  lines[i].split(" ")
+
+
+
+def preprocess_file():
+    pass

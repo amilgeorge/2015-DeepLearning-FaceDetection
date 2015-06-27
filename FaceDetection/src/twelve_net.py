@@ -79,7 +79,8 @@ class twelve_net():
         )
     
      
-        self.log_regression_layer = LogisticRegression(input=self.fullyconnected_layer.output, n_in=fullyconnected_output_size, n_out=2)
+        self.log_regression_layer = LogisticRegression(input=self.fullyconnected_layer.output,
+                                                        n_in=fullyconnected_output_size, n_out=2)
         
         self.params = self.conv_pool_layer.params + self.fullyconnected_layer.params +self.log_regression_layer.params
         
@@ -186,12 +187,18 @@ def evaluate_12net(learning_rate=0.1, n_epochs=200,
     
 
     train_set_x, train_set_y = get_test_data()
+    valid_set_x, valid_set_y = get_test_data()
+    test_set_x, test_set_y = get_test_data()
 
 
     # compute number of minibatches for training, validation and testing
-    n_train_batches = train_set_x.get_value(borrow=True).shape[0]
+    num_train_samples = train_set_x.get_value(borrow=True).shape[0]
+    num_valid_samples = valid_set_x.get_value(borrow=True).shape[0]
+    num_test_samples = test_set_x.get_value(borrow=True).shape[0]
 
-    n_train_batches /= batch_size
+    n_train_batches = num_train_samples/batch_size
+    n_valid_batches = num_valid_samples/batch_size
+    n_test_batches = num_test_samples/batch_size
 
 
     # allocate symbolic variables for the data
@@ -211,11 +218,12 @@ def evaluate_12net(learning_rate=0.1, n_epochs=200,
     # to a 4D tensor, compatible with our LeNetConvPoolLayer
     # (28, 28) is the size of MNIST images.
     layer0_input = x.reshape((batch_size, 3, 13, 13))
-
+    #layer0_input = x
     
     net = twelve_net(layer0_input,batch_size)
     
     cost = net.log_regression_layer.negative_log_likelihood(y)
+    errors = net.log_regression_layer.errors( y)
     
         # create a list of all model parameters to be fit by gradient descent
     params =  net.params
@@ -244,13 +252,138 @@ def evaluate_12net(learning_rate=0.1, n_epochs=200,
         }
     )
     
+    
+    test_model = theano.function(
+        [index],
+        errors,
+        givens={
+            x: test_set_x[index * batch_size: (index + 1) * batch_size],
+            y: test_set_y[index * batch_size: (index + 1) * batch_size]
+        }
+    )
+
+    validate_model = theano.function(
+        [index],
+        errors,
+        givens={
+            x: valid_set_x[index * batch_size: (index + 1) * batch_size],
+            y: valid_set_y[index * batch_size: (index + 1) * batch_size]
+        }
+    )
+    
     c = train_model(0);
+    
+    
+    
     
     print "C : ",c
     print "THE END"
     
     
+        ###############
+    # TRAIN MODEL #
+    ###############
+    print '... training'
+    # early-stopping parameters
+    patience = 10000  # look as this many examples regardless
+    patience_increase = 2  # wait this much longer when a new best is
+                           # found
+    improvement_threshold = 0.995  # a relative improvement of this much is
+                                   # considered significant
+    validation_frequency = min(n_train_batches, patience / 2)
+                                  # go through this many
+                                  # minibatche before checking the network
+                                  # on the validation set; in this case we
+                                  # check every epoch
+
+    best_validation_loss = numpy.inf
+    best_iter = 0
+    test_score = 0.
+    start_time = time.clock()
+
+    epoch = 0
+    done_looping = False
+
+    while (epoch < n_epochs) and (not done_looping):
+        epoch = epoch + 1
+        for minibatch_index in xrange(n_train_batches):
+
+            iter = (epoch - 1) * n_train_batches + minibatch_index
+
+            if iter % 100 == 0:
+                print 'training @ iter = ', iter
+            cost_ij = train_model(minibatch_index)
+
+            if (iter + 1) % validation_frequency == 0:
+
+                # compute zero-one loss on validation set
+                validation_losses = [validate_model(i) for i
+                                     in xrange(n_valid_batches)]
+                this_validation_loss = numpy.mean(validation_losses)
+                print('epoch %i, minibatch %i/%i, validation error %f %%' %
+                      (epoch, minibatch_index + 1, n_train_batches,
+                       this_validation_loss * 100.))
+
+                # if we got the best validation score until now
+                if this_validation_loss < best_validation_loss:
+
+                    #improve patience if loss improvement is good enough
+                    if this_validation_loss < best_validation_loss *  \
+                       improvement_threshold:
+                        patience = max(patience, iter * patience_increase)
+
+                    # save best validation score and iteration number
+                    best_validation_loss = this_validation_loss
+                    best_iter = iter
+
+                    # test it on the test set
+                    test_losses = [
+                        test_model(i)
+                        for i in xrange(n_test_batches)
+                    ]
+                    test_score = numpy.mean(test_losses)
+                    print(('     epoch %i, minibatch %i/%i, test error of '
+                           'best model %f %%') %
+                          (epoch, minibatch_index + 1, n_train_batches,
+                           test_score * 100.))
+
+            if patience <= iter:
+                done_looping = True
+                break
+
+    end_time = time.clock()
+    print('Optimization complete.')
+    print('Best validation score of %f %% obtained at iteration %i, '
+          'with test performance %f %%' %
+          (best_validation_loss * 100., best_iter + 1, test_score * 100.))
+    print >> sys.stderr, ('The code for file ' +
+                          os.path.split(__file__)[1] +
+                          ' ran for %.2fm' % ((end_time - start_time) / 60.))
     
+    
+def get_test_data2():
+    img1 = imread('data/test/img_1.jpg')
+    testimg1 = resize(img1,(13,13))
+   
+    
+    img2 = imread('data/test/img_47.jpg')
+    testimg2 = resize(img2,(13,13))
+    t = testimg1[numpy.newaxis,...]
+    
+    list_imgs = numpy.concatenate([testimg1[numpy.newaxis,...],testimg2[numpy.newaxis,...]])
+    list_imgs=numpy.rollaxis(list_imgs,3,1).shape
+    
+    #list_imgs = numpy.rollaxis(list_imgs,3,1)
+    
+    borrow = True
+    shared_x = theano.shared(numpy.asarray(list_imgs,
+                                               dtype=theano.config.floatX),
+                                 borrow=borrow)
+    shared_y = theano.shared(numpy.asarray( [1,0],
+                                               dtype=theano.config.floatX),
+                                 borrow=borrow)
+    
+    return shared_x,T.cast(shared_y, 'int32')    
 
 def get_test_data():
     img1 = imread('data/test/img_1.jpg')

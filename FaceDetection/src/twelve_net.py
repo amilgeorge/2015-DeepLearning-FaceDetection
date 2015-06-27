@@ -37,6 +37,7 @@ from mlp import HiddenLayer
 from skimage.io.collection import ImageCollection, concatenate_images
 from matplotlib.image import imread
 from skimage.transform._warps import resize
+from skimage.io._io import imread_collection
 
 class twelve_net():
     
@@ -163,9 +164,9 @@ class LeNetConvPoolLayer(object):
         # store parameters of this layer
         self.params = [self.W, self.b]
 
-def evaluate_12net(learning_rate=0.1, n_epochs=200,
+def evaluate_12net(learning_rate=0.01, n_epochs=200,
                     dataset='mnist.pkl.gz',
-                    nkerns=[20, 50], batch_size=2):
+                    nkerns=[20, 50], batch_size=50):
     """ Demonstrates lenet on MNIST dataset
 
     :type learning_rate: float
@@ -186,9 +187,9 @@ def evaluate_12net(learning_rate=0.1, n_epochs=200,
 
     
 
-    train_set_x, train_set_y = get_test_data()
-    valid_set_x, valid_set_y = get_test_data()
-    test_set_x, test_set_y = get_test_data()
+    train_set_x, train_set_y = get_train_data()
+    valid_set_x, valid_set_y = get_train_data()
+    test_set_x, test_set_y = get_train_data()
 
 
     # compute number of minibatches for training, validation and testing
@@ -304,6 +305,13 @@ def evaluate_12net(learning_rate=0.1, n_epochs=200,
     epoch = 0
     done_looping = False
 
+    # compute zero-one loss on validation set
+    validation_losses = [validate_model(i) for i
+                                in xrange(n_valid_batches)]
+    this_validation_loss = numpy.mean(validation_losses)
+    print('Pre training  validation error %f %%' %
+            (this_validation_loss * 100.))    
+
     while (epoch < n_epochs) and (not done_looping):
         epoch = epoch + 1
         for minibatch_index in xrange(n_train_batches):
@@ -360,7 +368,44 @@ def evaluate_12net(learning_rate=0.1, n_epochs=200,
                           os.path.split(__file__)[1] +
                           ' ran for %.2fm' % ((end_time - start_time) / 60.))
     
+
+def get_train_data():
+    #/Users/amilgeorge/Documents/StudySS2015/DeepLearning/Training\ Data/data/raw_images/train_faces/
+    img_faces=imread_collection(r"/Users/amilgeorge/Documents/StudySS2015/DeepLearning/Training Data/data/raw_images/train_faces/13/*.jpg")
+    arr_faces= concatenate_images(img_faces)
+    arr_faces=numpy.rollaxis(arr_faces, 3, 1)
+    num_face_imgs = arr_faces.shape[0]
+    arr_faces= arr_faces.reshape((arr_faces.shape[0],-1)); # Need to check this ---compare with flatten used during training
+      
+    out_faces = numpy.ones(arr_faces.shape[0])
     
+    img_bkgs=imread_collection(r"/Users/amilgeorge/Documents/StudySS2015/DeepLearning/Training Data/cifar/*.jpg")
+    arr_bkgs= concatenate_images(img_bkgs)
+    arr_bkgs=numpy.rollaxis(arr_bkgs, 3, 1)
+    arr_bkgs= arr_bkgs.reshape((arr_bkgs.shape[0],-1));
+    arr_bkgs=arr_bkgs[1:492] # Reduce the size of bkg images
+    out_bkgs = numpy.zeros(arr_bkgs.shape[0])
+    
+    
+    test_set = numpy.concatenate((arr_faces,arr_bkgs))
+    labels=numpy.concatenate((out_faces,out_bkgs))
+    
+    arr_indexes = numpy.arange(test_set.shape[0])
+    arr_indexes = numpy.random.permutation(test_set.shape[0])
+    
+    shuffled_test_set  = test_set[arr_indexes]
+    shuffled_labels = labels[arr_indexes].flatten()
+    
+    borrow = True
+    shared_x = theano.shared(numpy.asarray(shuffled_test_set,
+                                               dtype=theano.config.floatX),
+                                 borrow=borrow)
+    shared_y = theano.shared(numpy.asarray( shuffled_labels,
+                                               dtype=theano.config.floatX),
+                                 borrow=borrow)
+    
+    return shared_x,T.cast(shared_y, 'int32')
+        
 def get_test_data2():
     img1 = imread('data/test/img_1.jpg')
     testimg1 = resize(img1,(13,13))

@@ -1,7 +1,5 @@
 __author__ = 'Tanuj'
 
-__author__ = 'Tanuj'
-
 import skimage.io as io
 from os import walk
 import re
@@ -19,12 +17,16 @@ regex = re.compile(".*(ellipseList).*")
 f = [m.group(0) for l in f for m in [regex.search(l)] if m]
 
 file = open(FDDB_path + f[0], 'rb')
-
 n = -1
 mode = None
+lines = file.readlines()
 
-for line in file:
-    if(regex.search(line) != None):
-        mode = "image"
-    regex = re.compile(".*(img).*")
+n_lines = len(lines)
+i = 0
 
+mode = None
+
+while(i < n_lines):
+    
+
+    i += 1

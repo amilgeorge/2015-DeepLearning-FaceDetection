@@ -38,7 +38,53 @@ from skimage.io.collection import ImageCollection, concatenate_images
 from matplotlib.image import imread
 from skimage.transform._warps import resize
 
-
+class twelve_net():
+    
+    def __init__(self, input,batch_size):
+        
+        #layer0_input = x.reshape((batch_size, 3, 13, 13))
+        rng = numpy.random.RandomState(23455)
+        
+        img_size=13
+        img_channels =3
+        
+        conv_filter_size = 3
+        conv_filter_stride =1 # hard coded
+        conv_filter_depth = 16
+        
+        ## Not used becusee it is hardcoded  inside le-net
+        pool_filter_size = 3
+        pool_filter_stride = 2 
+        
+        conv_pool_output_size = 5 ## 10
+        
+        fullyconnected_output_size = 16
+    
+        self.conv_pool_layer = LeNetConvPoolLayer(
+            rng,
+            input=input,
+            image_shape=(batch_size, img_channels, img_size, img_size),
+            filter_shape=(conv_filter_depth, img_channels, conv_filter_size, conv_filter_size),
+            poolsize=(3, 3)
+        )
+        
+        
+        
+        self.fullyconnected_layer = HiddenLayer(
+        rng,
+        input=self.conv_pool_layer.output.flatten(2),
+        n_in=conv_filter_depth * conv_pool_output_size * conv_pool_output_size,
+        n_out=fullyconnected_output_size,
+        activation=T.tanh
+        )
+    
+     
+        self.log_regression_layer = LogisticRegression(input=self.fullyconnected_layer.output, n_in=fullyconnected_output_size, n_out=2)
+        
+        self.params = self.conv_pool_layer.params + self.fullyconnected_layer.params +self.log_regression_layer.params
+        
+        
+    
 class LeNetConvPoolLayer(object):
     """Pool Layer of a convolutional network """
 
@@ -166,45 +212,13 @@ def evaluate_12net(learning_rate=0.1, n_epochs=200,
     # (28, 28) is the size of MNIST images.
     layer0_input = x.reshape((batch_size, 3, 13, 13))
 
-    # Construct the first convolutional pooling layer:
-    # filtering reduces the image size to (12-3 + 1 , 12-3+1) = (10, 10)
-    # maxpooling reduces this further to (10 - 3)/2 +1, (10 - 3)/2 +1 = (12, 12)
-    # 4D output tensor is thus of shape (batch_size, nkerns[0], 12, 12)
     
+    net = twelve_net(layer0_input,batch_size)
     
-    # how to set image size for differnet size images
-    nkerns = 1 #Depth param
-    num_feature_maps_in_layer = 3 # RGB values
-    ## TODO : IS the training image shape is 12 X 12 ?? How to convolve in that case
-    ## During testing it is nto necessary 
-    
-    filter_size = 3 # 
-    
-    layer0 = LeNetConvPoolLayer(
-        rng,
-        input=layer0_input,
-        image_shape=(batch_size, num_feature_maps_in_layer, 13, 13),
-        filter_shape=(nkerns, num_feature_maps_in_layer, filter_size, filter_size),
-        poolsize=(3, 3)
-    )
-    
-    
-    hidden_layer = HiddenLayer(
-        rng,
-        input=layer0.output.flatten(2),
-        n_in=nkerns * 5 * 5,
-        n_out=16,
-        activation=T.tanh
-    )
-    
-    ## TODO : How many neurons in t
-    layer1 = LogisticRegression(input=hidden_layer.output, n_in=16, n_out=2)
-    
- 
-    cost = layer1.negative_log_likelihood(y)
+    cost = net.log_regression_layer.negative_log_likelihood(y)
     
         # create a list of all model parameters to be fit by gradient descent
-    params =  layer1.params + hidden_layer.params+layer0.params
+    params =  net.params
 
     # create a list of gradients for all model parameters
     grads = T.grad(cost, params)
@@ -243,7 +257,7 @@ def get_test_data():
     testimg1 = resize(img1,(13,13)).flatten()
     
     img2 = imread('data/test/img_47.jpg')
-    testimg2 = resize(img1,(13,13)).flatten()
+    testimg2 = resize(img2,(13,13)).flatten()
     t = testimg1[numpy.newaxis,...]
     
     list_imgs = numpy.concatenate([testimg1[numpy.newaxis,...],testimg2[numpy.newaxis,...]])

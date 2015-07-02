@@ -29,6 +29,7 @@ import numpy
 
 import theano
 import theano.tensor as T
+import cPickle as pickle
 from theano.tensor.signal import downsample
 from theano.tensor.nnet import conv
 
@@ -41,7 +42,7 @@ from skimage.io._io import imread_collection
 
 class twelve_net():
     
-    def __init__(self, input,batch_size):
+    def __init__(self, input,batch_size,state=None):
         
         #layer0_input = x.reshape((batch_size, 3, 13, 13))
         rng = numpy.random.RandomState(23455)
@@ -60,13 +61,25 @@ class twelve_net():
         conv_pool_output_size = 5 ## 10
         
         fullyconnected_output_size = 16
+        
+        self.input = input
+        
+        if state is None:
+            conv_pool_layer_state = None
+            fully_connected_layer_state = None
+            log_regression_layer_state = None
+        else:
+            conv_pool_layer_state = state[0:2]
+            fully_connected_layer_state = state[2:4]
+            log_regression_layer_state = state[4:6]
     
         self.conv_pool_layer = LeNetConvPoolLayer(
             rng,
             input=input,
             image_shape=(batch_size, img_channels, img_size, img_size),
             filter_shape=(conv_filter_depth, img_channels, conv_filter_size, conv_filter_size),
-            poolsize=(3, 3)
+            poolsize=(3, 3),
+            state = conv_pool_layer_state
         )
         
         
@@ -76,21 +89,25 @@ class twelve_net():
         input=self.conv_pool_layer.output.flatten(2),
         n_in=conv_filter_depth * conv_pool_output_size * conv_pool_output_size,
         n_out=fullyconnected_output_size,
-        activation=T.tanh
+        activation=T.tanh,
+        state = fully_connected_layer_state
         )
     
      
         self.log_regression_layer = LogisticRegression(input=self.fullyconnected_layer.output,
-                                                        n_in=fullyconnected_output_size, n_out=2)
+                                            n_in=fullyconnected_output_size,
+                                            n_out=2,state = log_regression_layer_state)
         
         self.params = self.conv_pool_layer.params + self.fullyconnected_layer.params +self.log_regression_layer.params
         
-        
+    def save(self, filename):
+        with open(filename, 'wb') as output:
+            pickle.dump(self.params, output, pickle.HIGHEST_PROTOCOL)    
     
 class LeNetConvPoolLayer(object):
     """Pool Layer of a convolutional network """
 
-    def __init__(self, rng, input, filter_shape, image_shape, poolsize=(3, 3)):
+    def __init__(self, rng, input, filter_shape, image_shape, poolsize=(3, 3),state = None):
         """
         Allocate a LeNetConvPoolLayer with shared variable internal parameters.
 
@@ -123,20 +140,30 @@ class LeNetConvPoolLayer(object):
         #   pooling size
         fan_out = (filter_shape[0] * numpy.prod(filter_shape[2:]) /
                    numpy.prod(poolsize))
+        
+        if state is None:
         # initialize weights with random weights
-        W_bound = numpy.sqrt(6. / (fan_in + fan_out))
-        self.W = theano.shared(
-            numpy.asarray(
-                rng.uniform(low=-W_bound, high=W_bound, size=filter_shape),
-                dtype=theano.config.floatX  # @UndefinedVariable
-            ),
-            borrow=True
-        )
+        
+            W_bound = numpy.sqrt(6. / (fan_in + fan_out))
+            W = theano.shared(
+                numpy.asarray(
+                    rng.uniform(low=-W_bound, high=W_bound, size=filter_shape),
+                    dtype=theano.config.floatX  # @UndefinedVariable
+                ),
+                borrow=True
+            )
+    
+            # the bias is a 1D tensor -- one bias per output feature map
+            b_values = numpy.zeros((filter_shape[0],), dtype=theano.config.floatX)  # @UndefinedVariable
+            b = theano.shared(value=b_values, borrow=True) 
 
-        # the bias is a 1D tensor -- one bias per output feature map
-        b_values = numpy.zeros((filter_shape[0],), dtype=theano.config.floatX)  # @UndefinedVariable
-        self.b = theano.shared(value=b_values, borrow=True) 
-
+        else:
+            W = state[0]
+            b = state[1]
+        
+        self.W = W
+        self.b = b
+        
         conv_layer_stride = 1;
         # convolve input feature maps with filters
         conv_out = conv.conv2d(
@@ -164,7 +191,7 @@ class LeNetConvPoolLayer(object):
         # store parameters of this layer
         self.params = [self.W, self.b]
 
-def evaluate_12net(learning_rate=0.01, n_epochs=200,
+def evaluate_12net(learning_rate=0.001, n_epochs=650,
                     dataset='mnist.pkl.gz',
                     nkerns=[20, 50], batch_size=50):
     """ Demonstrates lenet on MNIST dataset
@@ -188,7 +215,7 @@ def evaluate_12net(learning_rate=0.01, n_epochs=200,
     
 
     train_set_x, train_set_y = get_train_data()
-    valid_set_x, valid_set_y = get_train_data()
+    valid_set_x, valid_set_y = get_valid_data()
     test_set_x, test_set_y = get_train_data()
 
 
@@ -271,14 +298,6 @@ def evaluate_12net(learning_rate=0.01, n_epochs=200,
             y: valid_set_y[index * batch_size: (index + 1) * batch_size]
         }
     )
-    
-    c = train_model(0);
-    
-    
-    
-    
-    print "C : ",c
-    print "THE END"
     
     
         ###############
@@ -368,12 +387,15 @@ def evaluate_12net(learning_rate=0.01, n_epochs=200,
                           os.path.split(__file__)[1] +
                           ' ran for %.2fm' % ((end_time - start_time) / 60.))
     
+    net.save("test.save")
+    
 
-def get_train_data():
+def get_valid_data():
     #/Users/amilgeorge/Documents/StudySS2015/DeepLearning/Training\ Data/data/raw_images/train_faces/
     img_faces=imread_collection(r"/Users/amilgeorge/Documents/StudySS2015/DeepLearning/Training Data/data/raw_images/train_faces/13/*.jpg")
     arr_faces= concatenate_images(img_faces)
     arr_faces=numpy.rollaxis(arr_faces, 3, 1)
+    arr_faces=arr_faces[0:50]
     num_face_imgs = arr_faces.shape[0]
     arr_faces= arr_faces.reshape((arr_faces.shape[0],-1)); # Need to check this ---compare with flatten used during training
       
@@ -383,7 +405,45 @@ def get_train_data():
     arr_bkgs= concatenate_images(img_bkgs)
     arr_bkgs=numpy.rollaxis(arr_bkgs, 3, 1)
     arr_bkgs= arr_bkgs.reshape((arr_bkgs.shape[0],-1));
-    arr_bkgs=arr_bkgs[1:492] # Reduce the size of bkg images
+    arr_bkgs=arr_bkgs[1:50] # Reduce the size of bkg images
+    out_bkgs = numpy.zeros(arr_bkgs.shape[0])
+    
+    
+    test_set = numpy.concatenate((arr_faces,arr_bkgs))
+    labels=numpy.concatenate((out_faces,out_bkgs))
+    
+    arr_indexes = numpy.arange(test_set.shape[0])
+    arr_indexes = numpy.random.permutation(test_set.shape[0])
+    
+    shuffled_test_set  = test_set[arr_indexes]
+    shuffled_labels = labels[arr_indexes].flatten()
+    
+    borrow = True
+    shared_x = theano.shared(numpy.asarray(shuffled_test_set,
+                                               dtype=theano.config.floatX),
+                                 borrow=borrow)
+    shared_y = theano.shared(numpy.asarray( shuffled_labels,
+                                               dtype=theano.config.floatX),
+                                 borrow=borrow)
+    
+    return shared_x,T.cast(shared_y, 'int32')
+
+def get_train_data():
+    #/Users/amilgeorge/Documents/StudySS2015/DeepLearning/Training\ Data/data/raw_images/train_faces/
+    img_faces=imread_collection(r"/Users/amilgeorge/Documents/StudySS2015/DeepLearning/Training Data/data/raw_images/train_faces/13/*.jpg")
+    arr_faces= concatenate_images(img_faces)
+    arr_faces=numpy.rollaxis(arr_faces, 3, 1)
+    arr_faces=arr_faces[50:492]
+    num_face_imgs = arr_faces.shape[0]
+    arr_faces= arr_faces.reshape((arr_faces.shape[0],-1)); # Need to check this ---compare with flatten used during training
+      
+    out_faces = numpy.ones(arr_faces.shape[0])
+    
+    img_bkgs=imread_collection(r"/Users/amilgeorge/Documents/StudySS2015/DeepLearning/Training Data/cifar/*.jpg")
+    arr_bkgs= concatenate_images(img_bkgs)
+    arr_bkgs=numpy.rollaxis(arr_bkgs, 3, 1)
+    arr_bkgs= arr_bkgs.reshape((arr_bkgs.shape[0],-1));
+    arr_bkgs=arr_bkgs[50:492] # Reduce the size of bkg images
     out_bkgs = numpy.zeros(arr_bkgs.shape[0])
     
     
@@ -452,10 +512,76 @@ def get_test_data():
     
     return shared_x,T.cast(shared_y, 'int32')
 
+def test_validation(twelve_net_state,batch_size=50):
+    
+    train_set_x, train_set_y = get_train_data()
+    valid_set_x, valid_set_y = get_valid_data()
+    test_set_x, test_set_y = get_train_data()
+
+
+    # compute number of minibatches for training, validation and testing
+    num_train_samples = train_set_x.get_value(borrow=True).shape[0]
+    num_valid_samples = valid_set_x.get_value(borrow=True).shape[0]
+    num_test_samples = test_set_x.get_value(borrow=True).shape[0]
+
+    n_train_batches = num_train_samples/batch_size
+    n_valid_batches = num_valid_samples/batch_size
+    n_test_batches = num_test_samples/batch_size
+
+
+    # allocate symbolic variables for the data
+    index = T.lscalar()  # index to a [mini]batch
+
+    # start-snippet-1
+    x = T.matrix('x')   # the data is presented as rasterized images
+    y = T.ivector('y')  # the labels are presented as 1D vector of
+                        # [int] labels
+
+    ######################
+    # BUILD ACTUAL MODEL #
+    ######################
+    print '... building the model'
+
+    # Reshape matrix of rasterized images of shape (batch_size, 28 * 28)
+    # to a 4D tensor, compatible with our LeNetConvPoolLayer
+    # (28, 28) is the size of MNIST images.
+    layer0_input = x.reshape((batch_size, 3, 13, 13))
+    #layer0_input = x
+    
+    net = twelve_net(layer0_input,batch_size,twelve_net_state)
+
+
+    errors = net.log_regression_layer.errors( y)
+    validate_model = theano.function(
+        [index],
+        errors,
+        givens={
+            x: valid_set_x[index * batch_size: (index + 1) * batch_size],
+            y: valid_set_y[index * batch_size: (index + 1) * batch_size]
+        }
+    )
+    
+    validation_losses = [validate_model(i) for i
+                                in xrange(n_valid_batches)]
+    this_validation_loss = numpy.mean(validation_losses)
+    print('validation error %f %%' %
+            (this_validation_loss * 100.))  
+    
 def experiment():
     #collection = ImageCollection('data/test/*.jpg')
 
+    #evaluate_12net()
+    f = file('test.save', 'rb')
+    obj = pickle.load(f)
+    f.close()
+    
+    test_validation(obj)
+    
+def experiment_train():
+    #collection = ImageCollection('data/test/*.jpg')
+
     evaluate_12net()
+    
     
 if __name__ == '__main__':
     experiment()

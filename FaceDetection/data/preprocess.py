@@ -2,14 +2,21 @@ import skimage.io as io
 from os import walk
 import re
 import math
+import os
 
 from skimage.transform import resize
 
 FDDB_path = './data/FDDB-folds/'
-image_path = './data/raw_images/'
-image_save_path = './data/raw_images/train_faces/'
+image_path = './data/originalPics/'
+image_save_path = './data/processed_faces/'
 
-def extract_faces(output_folder, output_size):
+
+def extract_faces(output_size):
+
+    new_dir_name = os.path.join(image_save_path, str(output_size))
+
+    if not os.path.exists(new_dir_name):
+        os.makedirs(new_dir_name)
 
     f = []
     for (dirpath, dirnames, filenames) in walk(FDDB_path):
@@ -69,7 +76,7 @@ def extract_faces(output_folder, output_size):
 
             im = resize(im, output_size)
 
-            save_file_string = output_folder + "{0:06d}".format(face_save_count) + '.jpg'
+            save_file_string = os.path.join(new_dir_name, "{0:06d}".format(face_save_count) + '.jpg')
 
             io.imsave(save_file_string, im)
 
@@ -78,7 +85,7 @@ def extract_faces(output_folder, output_size):
 
 if __name__ == '__main__':
 
-    extract_faces(image_save_path + '13/', (13, 13))
-    extract_faces(image_save_path + '25/', (25, 25))
+    extract_faces((13, 13))
+    extract_faces((25, 25))
 
 

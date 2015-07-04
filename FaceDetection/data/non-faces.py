@@ -8,7 +8,7 @@ print 'Loading dataset...'
 
 
 data_file_name = 'data/cifar-10-batches-py/data_batch_1'
-image_save_path = 'data/processed_faces/'
+image_save_path = 'data/processed_images/'
 
 
 def extract_nonfaces(size):

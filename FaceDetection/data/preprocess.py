@@ -8,7 +8,7 @@ from skimage.transform import resize
 
 FDDB_path = './data/FDDB-folds/'
 image_path = './data/originalPics/'
-image_save_path = './data/processed_faces/'
+image_save_path = './data/processed_images/'
 
 
 def extract_faces(output_size):

@@ -4,5 +4,6 @@ FaceDetection/data/FDDB-folds.tgz
 FaceDetection/data/FDDB-folds/
 FaceDetection/data/originalPics.tar.gz
 FaceDetection/data/originalPics/
+FaceDetection/data/cifar-10-batches-py
 
 

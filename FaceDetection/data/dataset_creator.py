@@ -8,6 +8,7 @@ import shutil
 from os import listdir
 from os.path import isfile, join
 import os
+import sys
 
 def execute():
     
@@ -35,25 +36,34 @@ def execute():
     
     if num_faces < num_train_faces + num_validate_faces:
         print "I dont have enough faces"
+        sys.exit(0)
     
     if num_bkgs < num_train_bkgs + num_validate_bkgs:
         print "I dont have enough faces"
+        sys.exit(0)
    
     # Please delete the train and validate folder before you run
     os.makedirs(train_dir)
     os.makedirs(validation_dir)
     
+    faces_subfolder_name = "faces"
+    non_faces_subfolder_name = "nonfaces"
+    os.makedirs(join(train_dir,faces_subfolder_name))
+    os.makedirs(join(train_dir,non_faces_subfolder_name))
+    
+    os.makedirs(join(validation_dir,faces_subfolder_name))
+    os.makedirs(join(validation_dir,non_faces_subfolder_name))
     
     for i, img_name in enumerate(img_faces):
         
         if i < num_train_faces:
             face_path = join(faces_dir_path,img_name)
-            target_face_path = join(train_dir,"faces",img_name)
+            target_face_path = join(train_dir,faces_subfolder_name,img_name)
             shutil.copy(face_path,target_face_path)
         
         elif i < num_train_faces + num_validate_faces :
             face_path = join(faces_dir_path,img_name)
-            target_face_path = join(validation_dir,"faces",img_name)
+            target_face_path = join(validation_dir,faces_subfolder_name,img_name)
             shutil.copy(face_path,target_face_path)
         elif i >= num_train_faces + num_validate_faces:
             print "I'm done with faces..."
@@ -63,12 +73,12 @@ def execute():
        
         if i < num_train_bkgs:
             bkgs_path = join(bkgs_dir_path,img_name)
-            target_bkgs_path = join(train_dir,"nonfaces",img_name)
+            target_bkgs_path = join(train_dir,non_faces_subfolder_name,img_name)
             shutil.copy(bkgs_path,target_bkgs_path)
             
         elif i < num_train_bkgs + num_validate_bkgs :
             bkgs_path = join(bkgs_dir_path,img_name)
-            target_bkgs_path = join(validation_dir,"nonfaces",img_name)
+            target_bkgs_path = join(validation_dir,non_faces_subfolder_name,img_name)
             shutil.copy(bkgs_path,target_bkgs_path)
                         
         elif i >= num_train_bkgs + num_validate_bkgs :

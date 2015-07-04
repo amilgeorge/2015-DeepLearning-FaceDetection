@@ -40,6 +40,10 @@ from matplotlib.image import imread
 from skimage.transform._warps import resize
 from skimage.io._io import imread_collection
 
+from matplotlib import pyplot as plt
+from matplotlib import patches
+
+
 class twelve_net():
     
     def __init__(self, input,batch_size,state=None):
@@ -388,83 +392,60 @@ def evaluate_12net(learning_rate=0.001, n_epochs=650,
                           ' ran for %.2fm' % ((end_time - start_time) / 60.))
     
     net.save("test.save")
+
+def prepare_data(faces_collection,bkgs_collection):
+   
+    arr_faces= concatenate_images(faces_collection)
+    arr_faces=numpy.rollaxis(arr_faces, 3, 1)
+    arr_faces=arr_faces
+    num_face_imgs = arr_faces.shape[0]
+    arr_faces= arr_faces.reshape((arr_faces.shape[0],-1)); # Need to check this ---compare with flatten used during training
+      
+    out_faces = numpy.ones(arr_faces.shape[0])
     
+    arr_bkgs= concatenate_images(bkgs_collection)
+    arr_bkgs=numpy.rollaxis(arr_bkgs, 3, 1)
+    arr_bkgs= arr_bkgs.reshape((arr_bkgs.shape[0],-1));
+    arr_bkgs=arr_bkgs # Reduce the size of bkg images
+    out_bkgs = numpy.zeros(arr_bkgs.shape[0])
+    
+    
+    test_set = numpy.concatenate((arr_faces,arr_bkgs))
+    labels=numpy.concatenate((out_faces,out_bkgs))
+    
+    arr_indexes = numpy.random.permutation(test_set.shape[0])
+    
+    shuffled_test_set  = test_set[arr_indexes]
+    shuffled_labels = labels[arr_indexes].flatten()
+    
+    borrow = True
+    shared_x = theano.shared(numpy.asarray(shuffled_test_set,
+                                               dtype=theano.config.floatX),
+                                 borrow=borrow)
+    shared_y = theano.shared(numpy.asarray( shuffled_labels,
+                                               dtype=theano.config.floatX),
+                                 borrow=borrow)
+    
+    return shared_x,T.cast(shared_y, 'int32')    
 
 def get_valid_data():
     #/Users/amilgeorge/Documents/StudySS2015/DeepLearning/Training\ Data/data/raw_images/train_faces/
-    img_faces=imread_collection(r"/Users/amilgeorge/Documents/StudySS2015/DeepLearning/Training Data/data/raw_images/train_faces/13/*.jpg")
-    arr_faces= concatenate_images(img_faces)
-    arr_faces=numpy.rollaxis(arr_faces, 3, 1)
-    arr_faces=arr_faces[0:50]
-    num_face_imgs = arr_faces.shape[0]
-    arr_faces= arr_faces.reshape((arr_faces.shape[0],-1)); # Need to check this ---compare with flatten used during training
-      
-    out_faces = numpy.ones(arr_faces.shape[0])
+    img_faces=imread_collection("data/dataset/13/validation/faces/*.jpg")
+   
+    img_bkgs=imread_collection(r"data/dataset/13/validation/nonfaces/*.jpg")
     
-    img_bkgs=imread_collection(r"/Users/amilgeorge/Documents/StudySS2015/DeepLearning/Training Data/cifar/*.jpg")
-    arr_bkgs= concatenate_images(img_bkgs)
-    arr_bkgs=numpy.rollaxis(arr_bkgs, 3, 1)
-    arr_bkgs= arr_bkgs.reshape((arr_bkgs.shape[0],-1));
-    arr_bkgs=arr_bkgs[1:50] # Reduce the size of bkg images
-    out_bkgs = numpy.zeros(arr_bkgs.shape[0])
+    x,y = prepare_data(img_faces, img_bkgs)
     
-    
-    test_set = numpy.concatenate((arr_faces,arr_bkgs))
-    labels=numpy.concatenate((out_faces,out_bkgs))
-    
-    arr_indexes = numpy.arange(test_set.shape[0])
-    arr_indexes = numpy.random.permutation(test_set.shape[0])
-    
-    shuffled_test_set  = test_set[arr_indexes]
-    shuffled_labels = labels[arr_indexes].flatten()
-    
-    borrow = True
-    shared_x = theano.shared(numpy.asarray(shuffled_test_set,
-                                               dtype=theano.config.floatX),
-                                 borrow=borrow)
-    shared_y = theano.shared(numpy.asarray( shuffled_labels,
-                                               dtype=theano.config.floatX),
-                                 borrow=borrow)
-    
-    return shared_x,T.cast(shared_y, 'int32')
+    return x,y
 
 def get_train_data():
     #/Users/amilgeorge/Documents/StudySS2015/DeepLearning/Training\ Data/data/raw_images/train_faces/
-    img_faces=imread_collection(r"/Users/amilgeorge/Documents/StudySS2015/DeepLearning/Training Data/data/raw_images/train_faces/13/*.jpg")
-    arr_faces= concatenate_images(img_faces)
-    arr_faces=numpy.rollaxis(arr_faces, 3, 1)
-    arr_faces=arr_faces[50:492]
-    num_face_imgs = arr_faces.shape[0]
-    arr_faces= arr_faces.reshape((arr_faces.shape[0],-1)); # Need to check this ---compare with flatten used during training
-      
-    out_faces = numpy.ones(arr_faces.shape[0])
-    
-    img_bkgs=imread_collection(r"/Users/amilgeorge/Documents/StudySS2015/DeepLearning/Training Data/cifar/*.jpg")
-    arr_bkgs= concatenate_images(img_bkgs)
-    arr_bkgs=numpy.rollaxis(arr_bkgs, 3, 1)
-    arr_bkgs= arr_bkgs.reshape((arr_bkgs.shape[0],-1));
-    arr_bkgs=arr_bkgs[50:492] # Reduce the size of bkg images
-    out_bkgs = numpy.zeros(arr_bkgs.shape[0])
-    
-    
-    test_set = numpy.concatenate((arr_faces,arr_bkgs))
-    labels=numpy.concatenate((out_faces,out_bkgs))
-    
-    arr_indexes = numpy.arange(test_set.shape[0])
-    arr_indexes = numpy.random.permutation(test_set.shape[0])
-    
-    shuffled_test_set  = test_set[arr_indexes]
-    shuffled_labels = labels[arr_indexes].flatten()
-    
-    borrow = True
-    shared_x = theano.shared(numpy.asarray(shuffled_test_set,
-                                               dtype=theano.config.floatX),
-                                 borrow=borrow)
-    shared_y = theano.shared(numpy.asarray( shuffled_labels,
-                                               dtype=theano.config.floatX),
-                                 borrow=borrow)
-    
-    return shared_x,T.cast(shared_y, 'int32')
+    img_faces=imread_collection("data/dataset/13/train/faces/*.jpg")
+   
+    img_bkgs=imread_collection(r"data/dataset/13/train/nonfaces/*.jpg")
+
+    x,y = prepare_data(img_faces, img_bkgs)
+    return x, y 
         
 def get_test_data2():
     img1 = imread('data/test/img_1.jpg')
@@ -566,6 +547,89 @@ def test_validation(twelve_net_state,batch_size=50):
     this_validation_loss = numpy.mean(validation_losses)
     print('validation error %f %%' %
             (this_validation_loss * 100.))  
+
+
+def check_for_image():
+    
+    import skimage.data as data
+    import skimage.util
+    
+    
+    im=data.lena()
+    im =  resize(im,(50,50))
+    
+    arr = skimage.util.view_as_windows(im, (13,13,3), step=1)
+    f = file('test.save', 'rb')
+    obj = pickle.load(f)
+    f.close()
+    
+    numpy.rollaxis(arr,5,3)
+    
+    borrow = True
+    shared_x = theano.shared(numpy.asarray(arr,
+                                               dtype=theano.config.floatX),
+                                 borrow=borrow)
+    
+    iT = T.lscalar() 
+    jT = T.lscalar() 
+    
+    x = T.tensor3("x")
+    layer0_input = x.reshape((1, 3, 13, 13))
+   
+    net = twelve_net(layer0_input,None,obj)
+    prediction = net.log_regression_layer.y_pred
+    
+    test_model = theano.function(
+        [iT,jT],
+        prediction,
+        givens={
+            x: shared_x[iT,jT,0,:,:,:]            
+        }
+    )
+    
+    rows = arr.shape[0]
+    cols = arr.shape[1]
+    
+    
+    faces = []
+    
+    for i in xrange(rows):
+        for j in xrange(cols):
+            y = test_model(i,j)
+            
+            if y == 1:
+                faces.append([i,j])
+                print i,j
+
+    plt.imshow(im)
+    img_desc = plt.gca()
+    
+    rect = patches.Rectangle(
+            (10, 0),
+            13,
+            13,
+            fill=False,
+            color='r'
+        )
+    img_desc.add_patch(rect)
+    
+    for point in faces:
+        topleftx = point[1]
+        toplefty = point[0] -13
+         
+         
+        rect = patches.Rectangle(
+            (point[1], point[0]),
+            13,
+            13,
+            fill=False,
+            color='c'
+        )
+         
+        img_desc.add_patch(rect)
+   
+    plt.show()    
+            
     
 def experiment():
     #collection = ImageCollection('data/test/*.jpg')
@@ -584,7 +648,7 @@ def experiment_train():
     
     
 if __name__ == '__main__':
-    experiment()
+    check_for_image()
 
 
 

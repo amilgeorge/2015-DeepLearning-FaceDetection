@@ -48,12 +48,12 @@ def execute():
         
         if i < num_train_faces:
             face_path = join(faces_dir_path,img_name)
-            target_face_path = join(train_dir,"f"+img_name)
+            target_face_path = join(train_dir,"faces",img_name)
             shutil.copy(face_path,target_face_path)
         
         elif i < num_train_faces + num_validate_faces :
             face_path = join(faces_dir_path,img_name)
-            target_face_path = join(validation_dir,"f"+img_name)
+            target_face_path = join(validation_dir,"faces",img_name)
             shutil.copy(face_path,target_face_path)
         elif i >= num_train_faces + num_validate_faces:
             print "I'm done with faces..."
@@ -63,12 +63,12 @@ def execute():
        
         if i < num_train_bkgs:
             bkgs_path = join(bkgs_dir_path,img_name)
-            target_bkgs_path = join(train_dir,"b"+img_name)
+            target_bkgs_path = join(train_dir,"nonfaces",img_name)
             shutil.copy(bkgs_path,target_bkgs_path)
             
         elif i < num_train_bkgs + num_validate_bkgs :
             bkgs_path = join(bkgs_dir_path,img_name)
-            target_bkgs_path = join(validation_dir,"b"+img_name)
+            target_bkgs_path = join(validation_dir,"nonfaces",img_name)
             shutil.copy(bkgs_path,target_bkgs_path)
                         
         elif i >= num_train_bkgs + num_validate_bkgs :

@@ -13,7 +13,9 @@ image_save_path = './data/processed_faces/'
 
 def extract_faces(output_size):
 
-    new_dir_name = os.path.join(image_save_path, str(output_size))
+    file_name = "{}_{}_faces".format(*(output_size))
+
+    new_dir_name = os.path.join(image_save_path, file_name)
 
     if not os.path.exists(new_dir_name):
         os.makedirs(new_dir_name)

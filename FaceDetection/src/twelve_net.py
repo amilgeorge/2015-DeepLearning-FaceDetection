@@ -554,8 +554,8 @@ def check_for_image():
     import skimage.data as data
     import skimage.util
     
-    
-    im=data.lena()
+    #im = imread("data/originalPics/2002/07/19/big/img_141.jpg")
+    im=data.astronaut()
     im =  resize(im,(50,50))
     
     arr = skimage.util.view_as_windows(im, (13,13,3), step=1)
@@ -563,7 +563,7 @@ def check_for_image():
     obj = pickle.load(f)
     f.close()
     
-    numpy.rollaxis(arr,5,3)
+    arr=numpy.rollaxis(arr,5,3)
     
     borrow = True
     shared_x = theano.shared(numpy.asarray(arr,
@@ -578,10 +578,11 @@ def check_for_image():
    
     net = twelve_net(layer0_input,None,obj)
     prediction = net.log_regression_layer.y_pred
+    py_x = net.log_regression_layer.p_y_given_x
     
     test_model = theano.function(
         [iT,jT],
-        prediction,
+        [prediction,py_x,layer0_input],
         givens={
             x: shared_x[iT,jT,0,:,:,:]            
         }
@@ -595,31 +596,42 @@ def check_for_image():
     
     for i in xrange(rows):
         for j in xrange(cols):
-            y = test_model(i,j)
+            [y,p_y_given_x,f] = test_model(i,j)
+            f=f.reshape(3,13,13)
+            f = numpy.rollaxis(f,0,3)
+            plt.imshow(f) 
+            plt.show()
+
+           
             
             if y == 1:
+#                 f=f.reshape(3,13,13)
+#                 f = numpy.rollaxis(f,0,3)
+#                 plt.imshow(f) 
+#                 plt.show()
                 faces.append([i,j])
                 print i,j
-
+    print ("Check")
+    plt.show()
     plt.imshow(im)
     img_desc = plt.gca()
     
-    rect = patches.Rectangle(
-            (10, 0),
-            13,
-            13,
-            fill=False,
-            color='r'
-        )
-    img_desc.add_patch(rect)
+#     rect = patches.Rectangle(
+#             (10, 0),
+#             13,
+#             13,
+#             fill=False,
+#             color='r'
+#         )
+#     img_desc.add_patch(rect)
     
     for point in faces:
-        topleftx = point[1]
-        toplefty = point[0] -13
+        topleftx = point[1] 
+        toplefty = point[0] 
          
          
         rect = patches.Rectangle(
-            (point[1], point[0]),
+            (topleftx, toplefty),
             13,
             13,
             fill=False,

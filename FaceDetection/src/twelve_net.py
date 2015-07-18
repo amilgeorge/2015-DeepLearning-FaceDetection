@@ -42,11 +42,15 @@ from skimage.io._io import imread_collection
 
 from matplotlib import pyplot as plt
 from matplotlib import patches
+from relu import relu
 
 
+SAVE_STATE_TO_FILE = "test_tanh.save"
+LOAD_STATE_FROM_FILE = "test_tanh.save"
+    
 class twelve_net():
     
-    def __init__(self, input,batch_size,state=None):
+    def __init__(self, input,batch_size,activation,state=None):
         
         #layer0_input = x.reshape((batch_size, 3, 13, 13))
         rng = numpy.random.RandomState(23455)
@@ -83,6 +87,7 @@ class twelve_net():
             image_shape=(batch_size, img_channels, img_size, img_size),
             filter_shape=(conv_filter_depth, img_channels, conv_filter_size, conv_filter_size),
             poolsize=(3, 3),
+            activation=activation,
             state = conv_pool_layer_state
         )
         
@@ -93,7 +98,7 @@ class twelve_net():
         input=self.conv_pool_layer.output.flatten(2),
         n_in=conv_filter_depth * conv_pool_output_size * conv_pool_output_size,
         n_out=fullyconnected_output_size,
-        activation=T.tanh,
+        activation=activation,
         state = fully_connected_layer_state
         )
     
@@ -111,7 +116,7 @@ class twelve_net():
 class LeNetConvPoolLayer(object):
     """Pool Layer of a convolutional network """
 
-    def __init__(self, rng, input, filter_shape, image_shape, poolsize=(3, 3),state = None):
+    def __init__(self, rng, input, filter_shape, image_shape, poolsize=(3, 3),activation = None,state = None):
         """
         Allocate a LeNetConvPoolLayer with shared variable internal parameters.
 
@@ -190,7 +195,8 @@ class LeNetConvPoolLayer(object):
         # reshape it to a tensor of shape (1, n_filters, 1, 1). Each bias will
         # thus be broadcasted across mini-batches and feature map
         # width & height
-        self.output = T.tanh(pooled_out + self.b.dimshuffle('x', 0, 'x', 'x'))
+        # Non linearity relu is suggested in paper
+        self.output = activation(pooled_out + self.b.dimshuffle('x', 0, 'x', 'x'))
 
         # store parameters of this layer
         self.params = [self.W, self.b]
@@ -252,7 +258,7 @@ def evaluate_12net(learning_rate=0.001, n_epochs=650,
     layer0_input = x.reshape((batch_size, 3, 13, 13))
     #layer0_input = x
     
-    net = twelve_net(layer0_input,batch_size)
+    net = twelve_net(layer0_input,batch_size,T.tanh)
     
     cost = net.log_regression_layer.negative_log_likelihood(y)
     errors = net.log_regression_layer.errors( y)
@@ -391,7 +397,7 @@ def evaluate_12net(learning_rate=0.001, n_epochs=650,
                           os.path.split(__file__)[1] +
                           ' ran for %.2fm' % ((end_time - start_time) / 60.))
     
-    net.save("test.save")
+    net.save(SAVE_STATE_TO_FILE)
 
 def prepare_data(faces_collection,bkgs_collection):
    
@@ -554,12 +560,12 @@ def check_for_image():
     import skimage.data as data
     import skimage.util
     
-    #im = imread("data/originalPics/2002/07/19/big/img_141.jpg")
-    im=data.astronaut()
+    im = imread("data/originalPics/2002/07/19/big/img_372.jpg")
+    #im=data.astronaut()
     im =  resize(im,(50,50))
     
     arr = skimage.util.view_as_windows(im, (13,13,3), step=1)
-    f = file('test.save', 'rb')
+    f = file(LOAD_STATE_FROM_FILE, 'rb')
     obj = pickle.load(f)
     f.close()
     
@@ -576,7 +582,7 @@ def check_for_image():
     x = T.tensor3("x")
     layer0_input = x.reshape((1, 3, 13, 13))
    
-    net = twelve_net(layer0_input,None,obj)
+    net = twelve_net(layer0_input,None,T.tanh,obj)
     prediction = net.log_regression_layer.y_pred
     py_x = net.log_regression_layer.p_y_given_x
     
@@ -599,8 +605,8 @@ def check_for_image():
             [y,p_y_given_x,f] = test_model(i,j)
             f=f.reshape(3,13,13)
             f = numpy.rollaxis(f,0,3)
-            plt.imshow(f) 
-            plt.show()
+            #plt.imshow(f) 
+            #plt.show()
 
            
             
@@ -612,7 +618,6 @@ def check_for_image():
                 faces.append([i,j])
                 print i,j
     print ("Check")
-    plt.show()
     plt.imshow(im)
     img_desc = plt.gca()
     
@@ -647,7 +652,7 @@ def experiment():
     #collection = ImageCollection('data/test/*.jpg')
 
     #evaluate_12net()
-    f = file('test.save', 'rb')
+    f = file(LOAD_STATE_FROM_FILE, 'rb')
     obj = pickle.load(f)
     f.close()
     

@@ -41,8 +41,8 @@ def extract_faces(output_size):
     for i in range(no_rows):
         face = res.fetchone()
 
-        row = face[1]
-        col = face[2]
+        col = face[1]
+        row = face[2]
         width = face[3]
         height = face[4]
 

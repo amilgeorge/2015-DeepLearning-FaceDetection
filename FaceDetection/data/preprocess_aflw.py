@@ -31,7 +31,7 @@ def extract_faces(output_size):
         query = "SELECT FaceRect.face_id , FaceRect.x, FaceRect.y, FaceRect.w, FaceRect.h, FaceImages.file_id, " \
                 "FaceImages.filepath, FaceImages.width, FaceImages.height from FaceRect  inner join Faces on " \
                 "FaceRect.face_id = Faces.face_id inner join FaceImages on Faces.file_id = FaceImages.file_id"
-        #
+
         res = c.execute(query)
 
     faces = []
@@ -60,7 +60,7 @@ def extract_faces(output_size):
         image_max_row = image.shape[0]
         image_max_col = image.shape[1]
 
-        if row < 0 or col < 0 or row > image_max_row or col > image_max_col:
+        if row <= 0 or col <= 0 or row >= image_max_row or col >= image_max_col:
             continue
 
         im = image[row: row + height, col: col + width]

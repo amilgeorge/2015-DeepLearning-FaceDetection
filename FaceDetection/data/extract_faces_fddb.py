@@ -13,7 +13,7 @@ image_save_path = './data/processed_images/'
 
 def extract_faces(output_size):
 
-    file_name = "{}_{}_faces".format(*(output_size))
+    file_name = "{}_{}_faces_fddb".format(*(output_size))
 
     new_dir_name = os.path.join(image_save_path, file_name)
 
@@ -57,7 +57,7 @@ def extract_faces(output_size):
 
             for j in xrange(int(n_faces)):
 
-                param =  lines[i].split()
+                param = lines[i].split()
                 param = map(lambda x: float(x), param)
 
 
@@ -100,7 +100,8 @@ def extract_faces(output_size):
 
 if __name__ == '__main__':
 
-    extract_faces((13, 13))
-    extract_faces((25, 25))
+    # extract_faces((13, 13))
+    # extract_faces((25, 25))
+    extract_faces((28, 28))
 
 

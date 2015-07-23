@@ -13,7 +13,7 @@ image_save_path = 'data/processed_images/'
 
 def extract_nonfaces(size):
 
-    file_name = "{}_{}_nonfaces".format(*(size))
+    file_name = "{}_{}_nonfaces_cifar".format(*(size))
 
     new_dir_name = os.path.join(image_save_path, file_name)
 
@@ -38,5 +38,6 @@ def extract_nonfaces(size):
 
 if __name__ == '__main__':
 
-    extract_nonfaces((13, 13))
-    extract_nonfaces((25, 25))
+    #extract_nonfaces((13, 13))
+    #extract_nonfaces((25, 25))
+    extract_nonfaces((28, 28))

@@ -78,6 +78,9 @@ class HiddenLayer(object):
         #        compared to tanh
         #        We have no info for other function, so we use the same as
         #        tanh.
+
+        variance = numpy.sqrt(2.0/n_in)
+
         if state is None:
             W_values = numpy.asarray(
                 rng.uniform(
@@ -85,6 +88,7 @@ class HiddenLayer(object):
                     high=numpy.sqrt(6. / (n_in + n_out)),
                     size=(n_in, n_out)
                 ),
+                #rng.normal(loc=0, scale=variance, size=(n_in, n_out)),
                 dtype=theano.config.floatX
             )
             if activation == T.nnet.sigmoid:
@@ -97,8 +101,14 @@ class HiddenLayer(object):
             W = theano.shared(value=W_values, name='W', borrow=True)
             b = theano.shared(value=b_values, name='b', borrow=True)
         else:
-            W = state[0]
-            b = state[1]
+            W = theano.shared(
+                numpy.asarray(
+                    state[0],
+                    dtype=theano.config.floatX, # @UndefinedVariable
+                ),
+                borrow=True
+            )
+            b = theano.shared(value=state[1], borrow=True)
             
       
 

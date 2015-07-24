@@ -90,8 +90,14 @@ class LogisticRegression(object):
                 borrow=True
             )
         else:
-            W = state[0]
-            b = state[1]
+            W = theano.shared(
+                numpy.asarray(
+                    state[0],
+                    dtype=theano.config.floatX, # @UndefinedVariable
+                ),
+                borrow=True
+            )
+            b = theano.shared(value=state[1], borrow=True)
         
         self.W = W
         self.b = b

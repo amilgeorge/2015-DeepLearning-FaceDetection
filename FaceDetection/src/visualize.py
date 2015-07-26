@@ -128,6 +128,7 @@ if __name__ == '__main__':
 
 	# Load the object here into X where the image data is row-wise , set the image shape, 
 	# tile shape (rows ,columns) and tile spacing
+	# then save the image as follows
 	
 	'''
     print "Visualising the receptive fields...."

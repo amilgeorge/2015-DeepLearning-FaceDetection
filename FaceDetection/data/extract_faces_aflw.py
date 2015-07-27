@@ -63,7 +63,7 @@ def extract_faces(output_size, amount_of_faces_to_extract):
             image_max_row = image.shape[0]
             image_max_col = image.shape[1]
 
-            if row <= 0 or col <= 0 or row >= image_max_row or col >= image_max_col:
+            if row < 0 or col < 0 or row > image_max_row or col > image_max_col:
                 continue
 
             im = image[row: row + height, col: col + width]

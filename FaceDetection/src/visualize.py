@@ -138,17 +138,23 @@ if __name__ == '__main__':
 	# tile shape (rows ,columns) and tile spacing
 	# then save the image as follows
 
-	'''
+	
 	f = file('weights/lenet_original_weights.save', 'rb')
 	obj = cPickle.load(f)
 	f.close()
+	
+	weights = obj[0]
+
+	X = numpy.zeros((20 , 25))
+	for i in xrange(20):
+		X[i,:] = weights[i].flatten()
 
 	print "Visualising the receptive fields...."
 	image = Image.fromarray(tile_raster_images(
 		X,
-		img_shape=(5, 5), tile_shape=(1, 1),
-		tile_spacing=(1, 1)))
+		img_shape=(5, 5), tile_shape=(5, 4),
+		tile_spacing=(5, 5)))
 	image.save('repflds.png')
 	image.show()
-	'''
+	
 	

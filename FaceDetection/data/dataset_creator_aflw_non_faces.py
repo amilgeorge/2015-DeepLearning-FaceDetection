@@ -3,6 +3,7 @@ __author__ = 'Tanuj'
 import sqlite3
 import os.path
 import skimage.io as io
+import numpy as np
 
 from skimage.filters import gaussian_filter
 from skimage.util import random_noise
@@ -83,6 +84,11 @@ def create_non_faces_dataset_aflw():
 
                 im = image[row: row + height, col: col + width]
                 im = gaussian_filter(im, sigma=50)
+
+                mean = np.mean(im)
+
+                im = np.empty(shape=im.shape)
+                im.fill(mean)
                 im = random_noise(im)
                 im = img_as_ubyte(im)
                 # show_images(im)
@@ -96,13 +102,14 @@ def create_non_faces_dataset_aflw():
                 continue
 
             face_save_count += 1
-            #
+
             # if face_save_count == amount_of_faces_to_extract:
             #     break
 
         if modified:
             save_file_string = os.path.join(dataset_save_path, "{0:06d}".format(image_save_count) + ".jpg")
             io.imsave(save_file_string, image)
+            # io.imsave(os.path.join(dataset_save_path, path), image)
 
             if image_save_count % 10 == 0:
                 print "Processed", image_save_count, "/", no_images,  "images"

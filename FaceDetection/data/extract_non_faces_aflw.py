@@ -22,6 +22,7 @@ image_path = os.path.join(BASE_DIR, 'data/aflw/data/flickr/')
 dataset_save_path = os.path.join(BASE_DIR, 'data/processed_images/aflw/non_faces')
 image_save_path = os.path.join(BASE_DIR, 'data/processed_images/')
 
+output_fixed_size = (24, 24)
 
 def create_non_faces_dataset_aflw():
     # file_name = "{}_{}_nonfaces_aflw".format(*(output_size))
@@ -131,11 +132,8 @@ def extract_non_faces(output_size, no_negative_samples_required):
         break
 
     output_size = (output_size[0], output_size[1], 3)
-
     image_save_count = 0
-
     no_available_images = len(image_files)
-
     no_samples_per_image = 1.0 * no_negative_samples_required / no_available_images
 
     if no_samples_per_image < 1:
@@ -170,6 +168,7 @@ def extract_non_faces(output_size, no_negative_samples_required):
                 row = np.random.randint(0, max_row_no)
 
                 key = str(col) + '_' + str(row)
+
                 if not selected_windows_dict.has_key(key):
                     is_unique_key = True
                     selected_windows_dict[key] = True
@@ -177,16 +176,16 @@ def extract_non_faces(output_size, no_negative_samples_required):
             random_windows.append(images[col, row, 0])
 
         for im in random_windows:
-                save_file_string = os.path.join(new_dir_name, "{0:06d}".format(image_save_count) + '.jpg')
-                im = resize(im, (24, 24))
-                io.imsave(save_file_string, im)
-                image_save_count += 1
+            save_file_string = os.path.join(new_dir_name, "{0:06d}".format(image_save_count) + '.jpg')
+            im = resize(im, output_fixed_size)
+            io.imsave(save_file_string, im)
+            image_save_count += 1
+
+        if image_save_count % 50 == 0:
+            print "Processed", image_save_count, "/", no_negative_samples_required,  "samples"
 
         if image_save_count == no_negative_samples_required:
             break
-
-        if image_save_count % 50 == 0:
-                print "Processed", image_save_count, "/", no_negative_samples_required,  "samples"
 
 
 def show_images(images, titles=None):

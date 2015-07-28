@@ -3,6 +3,7 @@ import PIL.Image as Image
 import cPickle
 import os
 import gzip
+from matplotlib import pyplot as plt
 
 def scale_to_unit_interval(ndar, eps=1e-8):
     """ Scales all values in the ndarray ndar to be between 0 and 1 """
@@ -150,11 +151,21 @@ if __name__ == '__main__':
 		X[i,:] = weights[i].flatten()
 
 	print "Visualising the receptive fields...."
+	plt.imshow(tile_raster_images(
+		X,
+		img_shape=(5, 5), tile_shape=(5, 4),
+		tile_spacing=(3, 3)) ,  interpolation='nearest')
+
+	plt.axis('off')		
+	plt.set_cmap('gray')	
+	plt.show()
+	
+	'''
 	image = Image.fromarray(tile_raster_images(
 		X,
 		img_shape=(5, 5), tile_shape=(5, 4),
 		tile_spacing=(5, 5)))
 	image.save('repflds.png')
 	image.show()
-	
+	'''
 	

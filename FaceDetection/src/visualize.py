@@ -4,6 +4,14 @@ import cPickle
 import os
 import gzip
 
+def scale_to_unit_interval(ndar, eps=1e-8):
+    """ Scales all values in the ndarray ndar to be between 0 and 1 """
+    ndar = ndar.copy()
+    ndar -= ndar.min()
+    ndar *= 1.0 / (ndar.max() + eps)
+    return ndar
+
+
 def tile_raster_images(X, img_shape, tile_shape, tile_spacing=(0, 0),
                        scale_rows_to_unit_interval=True,
                        output_pixel_vals=True):
@@ -129,14 +137,18 @@ if __name__ == '__main__':
 	# Load the object here into X where the image data is row-wise , set the image shape, 
 	# tile shape (rows ,columns) and tile spacing
 	# then save the image as follows
-	
+
 	'''
-    print "Visualising the receptive fields...."
-    image = Image.fromarray(tile_raster_images(
-        X,
-        img_shape=(5, 5), tile_shape=(1, 10),
-        tile_spacing=(1, 1)))
-    image.save('repflds.png')
-    image.show()
+	f = file('weights/lenet_original_weights.save', 'rb')
+	obj = cPickle.load(f)
+	f.close()
+
+	print "Visualising the receptive fields...."
+	image = Image.fromarray(tile_raster_images(
+		X,
+		img_shape=(5, 5), tile_shape=(1, 1),
+		tile_spacing=(1, 1)))
+	image.save('repflds.png')
+	image.show()
 	'''
 	

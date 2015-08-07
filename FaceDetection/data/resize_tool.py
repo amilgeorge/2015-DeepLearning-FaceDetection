@@ -13,6 +13,24 @@ from skimage.color.colorconv import rgb2gray
 from skimage.util.dtype import img_as_ubyte
 
 
+def resize_imgs_in_dir(outputsize):
+    
+    img_dir_path = "data/newnonfaces/48_48_non_faces_aflw"
+    
+    target_path = "data/newnonfaces/13/nonfaces"
+        
+    os.makedirs(target_path)
+    
+    img_faces = [ f for f in listdir(img_dir_path) if isfile(join(img_dir_path,f)) and f.endswith("jpg") ]
+    
+    for i, img_name in enumerate(img_faces):
+        img_path = join(img_dir_path,img_name)
+        img = imread(img_path)
+        resized_img = resize(img,outputsize)     
+        ubyte_img = img_as_ubyte(resized_img)   
+        imsave(join(target_path,img_name), ubyte_img)
+        print "processed "+ img_path
+
 
 def execute(outputsize):
     
@@ -66,5 +84,5 @@ def convert_to_gray():
         
         
 if __name__ == '__main__':
-    execute((13,13))
+    resize_imgs_in_dir((13,13))
     #convert_to_gray()

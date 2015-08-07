@@ -19,14 +19,14 @@ def execute():
     validation_dir = join(target_path,"validation") 
     
     
-    num_train_faces = 3000
-    num_train_bkgs = 1500
+    num_train_faces = 40000
+    num_train_bkgs = 18000
     
-    num_validate_faces = 1000
-    num_validate_bkgs = 1000   
+    num_validate_faces = 10000
+    num_validate_bkgs = 4000
     
     
-    img_faces = [ f for f in listdir(faces_dir_path) if isfile(join(faces_dir_path,f)) and f.endswith("jpg") ]
+    img_faces = [ f for f in listdir(faces_dir_path) if isfile(join(faces_dir_path,f)) and f.endswith("png") ]
     img_bkgs =  [ f for f in listdir(bkgs_dir_path) if isfile(join(bkgs_dir_path,f)) and f.endswith("jpg") ]
     
     

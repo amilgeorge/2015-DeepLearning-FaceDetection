@@ -5,5 +5,7 @@ FaceDetection/data/FDDB-folds/
 FaceDetection/data/originalPics.tar.gz
 FaceDetection/data/originalPics/
 FaceDetection/data/cifar-10-batches-py
+FaceDetection/data/Caltech_WebFaces
+FaceDetection/data/Caltech_WebFaces.tar
 
 

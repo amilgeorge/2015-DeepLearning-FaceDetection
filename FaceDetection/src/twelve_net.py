@@ -634,7 +634,7 @@ def test_validation(twelve_net_state, batch_size=50):
     # Reshape matrix of rasterized images of shape (batch_size, 28 * 28)
     # to a 4D tensor, compatible with our LeNetConvPoolLayer
     # (28, 28) is the size of MNIST images.
-    layer0_input = x.reshape((batch_size, 3, 13, 13))
+    layer0_input = x.reshape((batch_size, 1, 13, 13))
     #layer0_input = x
 
     net = twelve_net(layer0_input,batch_size,twelve_net_state)
@@ -657,6 +657,7 @@ def test_validation(twelve_net_state, batch_size=50):
             (this_validation_loss * 100.))
 
 
+STEP_SIZE = 3
 def check_for_image():
 
     import skimage
@@ -664,8 +665,8 @@ def check_for_image():
     import skimage.util
 
 
-    img = skimage.data.lena()
-    #img = io.imread("data/originalPics/2002/07/19/big/img_130.jpg")
+    #img = skimage.data.lena()
+    img = io.imread("data/originalPics/2002/07/19/big/img_130.jpg")
     
     #img = io.imread("data/train_set/dataset/13/train/faces/00027998.png")
     
@@ -681,7 +682,7 @@ def check_for_image():
 
         im = resize(img, (mul*10, mul*10))
         im = img_as_ubyte(im) 
-        arr = skimage.util.view_as_windows(im, (13, 13, NUM_CHANNELS), step=1)
+        arr = skimage.util.view_as_windows(im, (13, 13, NUM_CHANNELS), step=STEP_SIZE)
         f = file(LOAD_STATE_FROM_FILE, 'rb')
         obj = pickle.load(f)
         f.close()
@@ -735,7 +736,7 @@ def check_for_image():
 
                 if y == 1:
                     count += 1
-                    faces.append([i,j])
+                    faces.append([i*STEP_SIZE,j*STEP_SIZE])
                     print i,j
 
         print ("Check")
@@ -743,6 +744,12 @@ def check_for_image():
         im = im[:,:,0]
         
         confidence_map=np.pad(confidence_map, 6,'constant')
+        
+        axarr[0].get_xaxis().set_visible(False)
+        axarr[0].get_yaxis().set_visible(False)        
+        axarr[1].get_xaxis().set_visible(False)
+        axarr[1].get_yaxis().set_visible(False)
+        
         axarr[1].imshow(confidence_map,cmap = "Greys_r")
         axarr[0].imshow(im,cmap = "Greys_r")
         img_desc = plt.gca()
@@ -767,7 +774,7 @@ def check_for_image():
             axarr[0].add_patch(rect)
 
         print count
-        #fig_name = "lena_" + str(mul)+".png"
+        #fig_name = "saddam_" + str(mul)+".png"
         #plt.savefig(fig_name, bbox_inches='tight')
         plt.show()
 
@@ -959,6 +966,8 @@ def visualize(fig,axarr,W):
     for i in xrange(num_filters):
         row_no = i / 4
         col_no = i % 4
+        axarr[row_no,col_no].get_xaxis().set_visible(False)
+        axarr[row_no,col_no].get_yaxis().set_visible(False)
         #fig.add_subplot(4,4,i+1)
         conv_filt = W_rolled[i,:,:,:]
         #data_row = conv_filt.flatten()

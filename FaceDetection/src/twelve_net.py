@@ -27,6 +27,9 @@ import time
 
 import numpy as np
 
+from os import listdir
+from os.path import isfile, join
+
 import theano
 import theano.tensor as T
 import cPickle as pickle
@@ -62,6 +65,8 @@ lbp_radius = 3
 lbp_method = 'uniform'
 
 NUM_CHANNELS = 1;
+
+THRESHOLD = 0.216215
 
 def save_list_of_weights(filename, weights_list):
     with open(filename, 'wb') as output:
@@ -665,8 +670,8 @@ def check_for_image():
     import skimage.util
 
 
-    #img = skimage.data.lena()
-    img = io.imread("data/originalPics/2002/07/19/big/img_130.jpg")
+    img = skimage.data.lena()
+    #img = io.imread("data/originalPics/2002/07/19/big/img_130.jpg")
     
     #img = io.imread("data/train_set/dataset/13/train/faces/00027998.png")
     
@@ -774,11 +779,11 @@ def check_for_image():
             axarr[0].add_patch(rect)
 
         print count
-        #fig_name = "saddam_" + str(mul)+".png"
-        #plt.savefig(fig_name, bbox_inches='tight')
-        plt.show()
+        fig_name = "lena_" + str(mul)+".png"
+        plt.savefig(fig_name, bbox_inches='tight')
+        #plt.show()
 
-def evaluate_trained_net_on_patches(state,folder="data/train_set/dataset/13/train/nonfaces/*.jpg"):
+def evaluate_trained_net_on_patches(state,folder="data/train_set/dataset/13/validation/faces/*.png"):
     img_collection = imread_collection(folder)
     
     arr_imgs = concatenate_images(img_collection)
@@ -812,9 +817,10 @@ def evaluate_trained_net_on_patches(state,folder="data/train_set/dataset/13/trai
     min_py_x = 99999;
     max_py_x = 0
     num_faces = 0
+    thresholds = []
     for i in xrange(num_arr_imgs):
         [out_predict,out_py_x,out_face]=test_model(i)
-        
+        thresholds.append(out_py_x[0,1])
         if out_py_x[0,1] < min_py_x :
             min_py_x = out_py_x[0,1]
         
@@ -825,16 +831,57 @@ def evaluate_trained_net_on_patches(state,folder="data/train_set/dataset/13/trai
             num_faces =num_faces +1
     
     
+    recall_index = int(num_arr_imgs * .01)
+    
+    thresholds.sort()
+    t = thresholds[recall_index]
+    
     print "Num faces: %d" %(num_faces) 
-    print "min_py_x: %f" %(min_py_x) 
-    print "max_py_x: %f" %(max_py_x) 
-    print "Num images evaluated %d" %(num_arr_imgs)
+    print "min_py_x(for face): %f" %(min_py_x) 
+    print "max_py_x(for face): %f" %(max_py_x) 
+    print "Num images evaluated: %d" %(num_arr_imgs)
+    print "Threshold %f" %(t)
     
             
-         
+def evaluate_face_confidence_scores(state,folder="data/newnonfaces/13/nonfaces"):
     
+    x = T.matrix("x")
     
+    layer0_input = x.reshape((1, NUM_CHANNELS, 13, 13))
+
+    net = twelve_net(layer0_input, None, relu, state)
+    prediction = net.log_regression_layer.y_pred
+    py_x = net.log_regression_layer.p_y_given_x
+
+    test_model = theano.function(
+            [x],
+            [prediction, py_x, layer0_input],
+       
+    )
+    target_path = "data/newnonfaces/13/nonface_faces"
+        
+    os.makedirs(target_path)
     
+    output_dict = {}
+    imgs =  [ f for f in listdir(folder) if isfile(join(folder,f)) and f.endswith("jpg") ]
+    for i, img_name in enumerate(imgs):
+        img_path = join(folder,img_name)
+        img = io.imread(img_path)
+        gray_img = rgb2gray(img)  
+        ubyte_img = img_as_ubyte(gray_img)    
+        [out_predict,out_py_x,out_face]=test_model(ubyte_img)    
+        if out_py_x[0,1] > THRESHOLD:
+            io.imsave(join(target_path,img_name), ubyte_img)    
+        output_dict[img_name] = out_py_x[0,1]
+        print "processed "+ img_path
+    
+    save_dict_to_file(output_dict)     
+    
+def save_dict_to_file(out_dict):
+    import csv
+    w = csv.writer(open("output.csv", "w"))
+    for key, val in out_dict.items():
+        w.writerow([key, val])    
     
     
     
@@ -1010,38 +1057,57 @@ def visualize_filter():
     obj = pickle.load(f)
     f.close()
     W = obj[0];
+    
     W_rolled = np.rollaxis(W, 1, 4)
     num_filters = W_rolled.shape[0]
-    #fig = plt.figure()
-    plt.ion()
+    fig = plt.figure()
+
     fig,axarr = plt.subplots(4,4)
+    Wmin = W_rolled.min();
+    W_rolled = W_rolled - Wmin
+    Wmax = W_rolled.max();
+    W_rolled = W_rolled/Wmax
+    
+    
     for i in xrange(num_filters):
         row_no = i / 4
         col_no = i % 4
+        axarr[row_no,col_no].get_xaxis().set_visible(False)
+        axarr[row_no,col_no].get_yaxis().set_visible(False)
         #fig.add_subplot(4,4,i+1)
         conv_filt = W_rolled[i,:,:,:]
-        data_row = conv_filt.flatten()
-        data_row = data_row - data_row.min()
-        data_row = data_row/data_row.max()
-        data_row = data_row * 255
-        img = data_row.reshape(3,3,3)#.astype('uint8')
+        #data_row = conv_filt.flatten()
+#       data_row = data_row - data_row.min()
+#       data_row = data_row/data_row.max()
+        #data_row = data_row * 255
+        #conv_filt = conv_filt - Wmin;
+        #Wmax = W_rolled.max();
+        #conv_filt = conv_filt / conv_filt.max()
+        img = conv_filt *255
+        
+        #img = data_row.reshape(3,3,1)#.astype('uint8')
+        img = img[:,:,0]
         #fig.figimage(img,(i+1)*3,0)
         #pil_img = Image.fromarray(img)
         #s = "filte" + str(i) + ".jpg"
         #pil_img.save(s)
         #plt.imshow(pil_img)
         #pil_img.show()
-        axarr[row_no,col_no].imshow(img,interpolation = 'none')
+        axarr[row_no,col_no].imshow(img,interpolation = 'none',cmap = "Greys_r")
         #plt.show()
     
-    #plt.show()
-    fig.canvas.draw()
+    plt.show()
+    #fig.canvas.draw()
     
-    a = np.zeros((3,3,3))
-    a[0,0,0] = 255
-    a[0,0,1] = 255
-    axarr[0,0].imshow(a)
-    fig.canvas.draw()
+#     a = np.zeros((3,3,3))
+#     a[0,0,0] = 255
+#     a[0,0,1] = 255
+#     axarr[0,0].imshow(a)
+#     fig.canvas.draw()
+    
+    
+    
+    print "Visualizing"
     
     
     
@@ -1053,12 +1119,20 @@ def call_evalate_trained_net():
     f.close()    
         
     evaluate_trained_net_on_patches(state = obj)
+
+def call_evalate_face_confidence():
+    f = file(LOAD_STATE_FROM_FILE, 'rb')
+    obj = pickle.load(f)
+    f.close()    
+        
+    evaluate_face_confidence_scores(state = obj)
         
 if __name__ == '__main__':
-    check_for_image()
+    #check_for_image()
     #experiment_train()
     
     #call_evalate_trained_net()
-    
+    call_evalate_face_confidence()
+    #visualize_filter()
 
 
